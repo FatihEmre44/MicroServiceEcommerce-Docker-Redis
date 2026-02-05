@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  # Mesaj Kuyruğu (Haberleşme Köprüsü)
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5662"   # Mesaj iletim portu
+      - "15672:15672" # Yönetim arayüzü (UI)
+    networks:
+      - ecommerce-net
+
+  # Auth Servisi Veri Tabanı
+  auth-db:
+    image: mongo
+    ports:
+      - "27017:27017"
+    networks:
+      - ecommerce-net
+
+networks:
+  ecommerce-net:
+    driver: bridge
