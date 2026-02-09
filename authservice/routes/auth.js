@@ -2,6 +2,14 @@ const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authcontrolle');
 const { verifyToken, isAdmin } = require('../middleware/auth');
+// Token doğrulama endpointi (diğer servisler için)
+router.post('/verify', (req, res) => {
+	const { verifyToken } = require('../middleware/auth');
+	verifyToken(req, res, () => {
+		// Başarılıysa user bilgisini dön
+		res.json({ user: req.user });
+	});
+});
 
 // Kayıt ol
 router.post('/register', authController.register);
