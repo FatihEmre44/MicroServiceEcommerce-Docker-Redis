@@ -1,6 +1,67 @@
 
 const Product = require('../models/product');
 
+// Get all products (public - no auth required)
+const getAllProducts = async (req, res) => {
+	try {
+		const { category, minPrice, maxPrice, search, page = 1, limit = 10 } = req.query;
+
+		// Build filter object
+		const filter = { isActive: true };
+
+		if (category) filter.category = category;
+		if (minPrice || maxPrice) {
+			filter.price = {};
+			if (minPrice) filter.price.$gte = Number(minPrice);
+			if (maxPrice) filter.price.$lte = Number(maxPrice);
+		}
+		if (search) {
+			filter.$or = [
+				{ name: { $regex: search, $options: 'i' } },
+				{ description: { $regex: search, $options: 'i' } }
+			];
+		}
+
+		// Pagination
+		const skip = (Number(page) - 1) * Number(limit);
+
+		const products = await Product.find(filter)
+			.sort({ createdAt: -1 })
+			.skip(skip)
+			.limit(Number(limit));
+
+		const total = await Product.countDocuments(filter);
+
+		res.json({
+			products,
+			pagination: {
+				page: Number(page),
+				limit: Number(limit),
+				total,
+				pages: Math.ceil(total / Number(limit))
+			}
+		});
+	} catch (err) {
+		res.status(500).json({ error: err.message });
+	}
+};
+
+// Get single product by ID (public - no auth required)
+const getProductById = async (req, res) => {
+	try {
+		const { id } = req.params;
+		const product = await Product.findById(id);
+
+		if (!product) {
+			return res.status(404).json({ error: 'Product not found' });
+		}
+
+		res.json(product);
+	} catch (err) {
+		res.status(400).json({ error: err.message });
+	}
+};
+
 // ...existing code...
 
 // Create product (only seller or admin)
@@ -51,6 +112,8 @@ const deleteProduct = async (req, res) => {
 };
 
 module.exports = {
+	getAllProducts,
+	getProductById,
 	createProduct,
 	updateProduct,
 	deleteProduct
