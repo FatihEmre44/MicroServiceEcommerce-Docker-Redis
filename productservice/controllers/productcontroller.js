@@ -1,5 +1,6 @@
 
 const Product = require('../models/product');
+const { publishEvent } = require('../message/producer');
 
 // Get all products (public - no auth required)
 const getAllProducts = async (req, res) => {
@@ -72,6 +73,15 @@ const createProduct = async (req, res) => {
 	try {
 		const product = new Product({ ...req.body, sellerId: req.user.userId });
 		await product.save();
+
+		publishEvent('product_updates_for_order', {
+            type: 'PRODUCT_CREATED',
+            data: {
+                id: product._id,
+                price: product.price,
+                isActive: product.isActive
+            }
+        });
 		res.status(201).json(product);
 	} catch (err) {
 		res.status(400).json({ error: err.message });
@@ -89,6 +99,14 @@ const updateProduct = async (req, res) => {
 		}
 		Object.assign(product, req.body);
 		await product.save();
+		publishEvent('product_updates_for_order', {
+            type: 'PRODUCT_UPDATED',
+            data: {
+                id: product._id,
+                price: product.price,
+                isActive: product.isActive
+            }
+        });
 		res.json(product);
 	} catch (err) {
 		res.status(400).json({ error: err.message });
@@ -105,6 +123,13 @@ const deleteProduct = async (req, res) => {
 			return res.status(403).json({ error: 'Unauthorized' });
 		}
 		await product.remove();
+		publishEvent('product_updates_for_order', {
+            type: 'PRODUCT_DELETED', 
+            data: {
+                id: product._id,
+                isActive: false 
+            }
+        });
 		res.json({ message: 'Product deleted' });
 	} catch (err) {
 		res.status(400).json({ error: err.message });
