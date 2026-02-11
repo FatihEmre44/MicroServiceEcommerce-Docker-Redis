@@ -53,11 +53,37 @@ services:
       - "3002:3002"
     environment:
       - PORT=3002
-      - MONGO_URI=mongodb://auth-db:27017/productdb # Using auth-db for now as shared or need to fix connection string if separate
+      - MONGO_URI=mongodb://product-db:27017/productdb
       - RABBITMQ_URL=amqp://rabbitmq:5672
       - JWT_SECRET=gizli-anahtar-degistir # Auth servisi ile ayni olmali
     depends_on:
       - product-db
+      - rabbitmq
+    networks:
+      - ecommerce-net
+
+  # Order Servisi Veri Tabanı
+  order-db:
+    image: mongo
+    ports:
+      - "27020:27017"
+    volumes:
+      - order-data:/data/db
+    networks:
+      - ecommerce-net
+
+  # Order Servisi
+  order-service:
+    build: ./orderservice
+    ports:
+      - "3003:3003"
+    environment:
+      - PORT=3003
+      - MONGO_URI=mongodb://order-db:27017/orderdb
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - JWT_SECRET=gizli-anahtar-degistir
+    depends_on:
+      - order-db
       - rabbitmq
     networks:
       - ecommerce-net
@@ -69,3 +95,4 @@ networks:
 volumes:
   auth-data:
   product-data:
+  order-data:

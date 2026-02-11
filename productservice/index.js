@@ -6,7 +6,7 @@ const cors = require('cors');
 
 // Modeller ve Yardımcılar
 const Product = require('./models/product');
-const { connectRabbit, consumeEvent } = require('./message/producer'); 
+const { connectRabbit, consumeEvent } = require('./message/producer');
 
 dotenv.config();
 const app = express();
@@ -29,10 +29,10 @@ async function startServer() {
 
         // --- EVENT CONSUMERS (Olay Dinleyicileri) ---
 
-        // KANAL B: Sipariş Geldiğinde Stok Düşürme
+        // KANAL B: Sipariş Geldiğinde Stok Düşürme / İptalinde Stok Geri Yükleme
         await consumeEvent('order_events', async (message) => {
             if (message.type === 'ORDER_CREATED') {
-                console.log(`[STOK] Sipariş alındı: ${message.data.orderId}. Güncelleniyor...`);
+                console.log(`[STOK] Sipariş alındı: ${message.data.orderId}. Stok düşürülüyor...`);
                 try {
                     for (const item of message.data.items) {
                         // Atomik işlem: $inc ile stok azaltma
@@ -43,6 +43,19 @@ async function startServer() {
                     console.log('[STOK] Tüm ürünlerin stokları başarıyla düşürüldü.');
                 } catch (err) {
                     console.error('[STOK HATA] Stok güncellenirken hata:', err.message);
+                }
+            } else if (message.type === 'ORDER_CANCELLED') {
+                console.log(`[STOK] Sipariş iptal edildi: ${message.data.orderId}. Stok geri yükleniyor...`);
+                try {
+                    for (const item of message.data.items) {
+                        // Atomik işlem: $inc ile stok geri ekleme
+                        await Product.findByIdAndUpdate(item.productId, {
+                            $inc: { stock: item.quantity }
+                        });
+                    }
+                    console.log('[STOK] Tüm ürünlerin stokları başarıyla geri yüklendi.');
+                } catch (err) {
+                    console.error('[STOK HATA] Stok geri yüklenirken hata:', err.message);
                 }
             }
         });
