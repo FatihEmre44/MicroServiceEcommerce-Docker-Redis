@@ -75,13 +75,30 @@ const createProduct = async (req, res) => {
 		await product.save();
 
 		publishEvent('product_updates_for_order', {
-            type: 'PRODUCT_CREATED',
-            data: {
-                id: product._id,
-                price: product.price,
-                isActive: product.isActive
-            }
-        });
+			type: 'PRODUCT_CREATED',
+			data: {
+				id: product._id,
+				price: product.price,
+				isActive: product.isActive
+			}
+		});
+
+		// Search Service indeksleme olayı
+		publishEvent('product_search_index', {
+			type: 'PRODUCT_CREATED',
+			data: {
+				id: product._id,
+				name: product.name,
+				description: product.description,
+				price: product.price,
+				stock: product.stock,
+				category: product.category,
+				images: product.images,
+				isActive: product.isActive,
+				sellerId: product.sellerId,
+				createdAt: product.createdAt
+			}
+		});
 		res.status(201).json(product);
 	} catch (err) {
 		res.status(400).json({ error: err.message });
@@ -100,13 +117,30 @@ const updateProduct = async (req, res) => {
 		Object.assign(product, req.body);
 		await product.save();
 		publishEvent('product_updates_for_order', {
-            type: 'PRODUCT_UPDATED',
-            data: {
-                id: product._id,
-                price: product.price,
-                isActive: product.isActive
-            }
-        });
+			type: 'PRODUCT_UPDATED',
+			data: {
+				id: product._id,
+				price: product.price,
+				isActive: product.isActive
+			}
+		});
+
+		// Search Service indeksleme olayı
+		publishEvent('product_search_index', {
+			type: 'PRODUCT_UPDATED',
+			data: {
+				id: product._id,
+				name: product.name,
+				description: product.description,
+				price: product.price,
+				stock: product.stock,
+				category: product.category,
+				images: product.images,
+				isActive: product.isActive,
+				sellerId: product.sellerId,
+				createdAt: product.createdAt
+			}
+		});
 		res.json(product);
 	} catch (err) {
 		res.status(400).json({ error: err.message });
@@ -124,12 +158,18 @@ const deleteProduct = async (req, res) => {
 		}
 		await product.remove();
 		publishEvent('product_updates_for_order', {
-            type: 'PRODUCT_DELETED', 
-            data: {
-                id: product._id,
-                isActive: false 
-            }
-        });
+			type: 'PRODUCT_DELETED',
+			data: {
+				id: product._id,
+				isActive: false
+			}
+		});
+
+		// Search Service indeksten silme olayı
+		publishEvent('product_search_index', {
+			type: 'PRODUCT_DELETED',
+			data: { id: product._id }
+		});
 		res.json({ message: 'Product deleted' });
 	} catch (err) {
 		res.status(400).json({ error: err.message });
