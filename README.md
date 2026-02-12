@@ -43,20 +43,26 @@ Proje, her biri kendi sorumluluk alanına sahip, izole edilmiş ve bağımsız o
 
 ## 🔄 Servisler Arası İletişim (Event-Driven Architecture)
 
-Bu projede servisler birbirine "bağımlı" değildir. Yani Product servisi çökerse, Sipariş servisi çalışmaya devam edebilir. Bunu sağlayan yapı **RabbitMQ** ile kurulan asenkron iletişimdir.
+Aşağıdaki şema, servislerin birbiriyle nasıl konuştuğunu (Event-Driven Architecture) özetlemektedir:
 
-### Örnek Senaryo: Yeni Bir Ürün Ekleme Akışı
+```mermaid
+graph LR
+    User((Kullanıcı)) -->|HTTP Request| API_Gateway[API Gateway :8000]
+    
+    API_Gateway --> Auth[Auth Service :3001]
+    API_Gateway --> Product[Product Service :3002]
+    API_Gateway --> Order[Order Service :3003]
+    API_Gateway --> Search[Search Service :3004]
 
-Sistemin nasıl çalıştığını anlamak için bir ürünün oluşturulma anını adım adım inceleyelim:
+    Product -.->|'ProductCreated' Event| RabbitMQ{RabbitMQ}
+    
+    RabbitMQ -.->|Stock Update Event| Order
+    RabbitMQ -.->|Search Index Update Event| Search
 
-1.  **İstek (Request):** Kullanıcı, `POST /products` isteğini API Gateway'e gönderir.
-2.  **Yönlendirme:** Gateway, isteği **Product Service**'e iletir.
-3.  **Kayıt (DB Write):** Product Service, ürünü kendi MongoDB veritabanına kaydeder.
-4.  **Olay Fırlatma (Publish):** Ürün başarıyla kaydedildikten sonra, Product Service **RabbitMQ**'ya şu mesajı fırlatır:
-    > *"Hey millet! ID'si 123, adı 'Laptop', fiyatı 5000 olan yeni bir ürün sisteme eklendi!"* (ProductCreated Event)
-5.  **Dinleyiciler (Subscribers):**
-    *   **Search Service** bu mesajı duyar: *"Harika, hemen bu Laptop'ı Redis önbelleğime ekleyeyim de insanlar aratınca bulsun."* der.
-    *   **Order Service** (varsa ilgili senaryo) bu mesajı duyar ve gerekirse kendi kayıtlarını günceller.
+    classDef default fill:#f9f9f9,stroke:#333,stroke-width:2px;
+    classDef mq fill:#ffcc80,stroke:#e65100,stroke-width:2px;
+    class RabbitMQ mq;
+```
 
 Bu yapı sayesinde, Search servisi o an çalışmıyor olsa bile, RabbitMQ mesajı saklar. Search servisi ayağa kalktığında mesajı alır ve kendini günceller. **Veri kaybı yaşanmaz.**
 
